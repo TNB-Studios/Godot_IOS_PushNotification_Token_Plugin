@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PushNotificationToken" inherits="Node" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Requests iOS push notification permission and provides the APNs device token.
+	</brief_description>
+	<description>
+		Add this node to your scene tree (or use it as an autoload singleton). It swizzles the Godot AppDelegate to capture the APNs device token and exposes it via signals.
+		Typical usage:
+		1. Connect to [signal token_received], [signal token_failed], and [signal permission_result].
+		2. Call [method request_permission].
+		3. On [signal token_received], send the token string to your backend.
+	</description>
+	<methods>
+		<method name="request_permission">
+			<return type="void" />
+			<description>
+				Prompts the user for notification permission. If granted, automatically registers for remote notifications. Results arrive via [signal permission_result] and then [signal token_received] or [signal token_failed].
+			</description>
+		</method>
+		<method name="register_for_remote_notifications">
+			<return type="void" />
+			<description>
+				Re-registers for remote notifications without showing the permission dialog. Use this on subsequent app launches after the user has already granted permission.
+			</description>
+		</method>
+		<method name="get_device_token">
+			<return type="String" />
+			<description>
+				Returns the last known APNs device token as a hex string, or an empty string if not yet available.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="device_token" type="String" setter="" getter="get_device_token" default="&quot;&quot;">
+			The most recently received APNs device token (hex-encoded string).
+		</member>
+	</members>
+	<signals>
+		<signal name="token_received">
+			<param index="0" name="token" type="String" />
+			<description>
+				Emitted when the APNs device token is successfully received. [param token] is the hex-encoded token string suitable for sending to your push notification server.
+			</description>
+		</signal>
+		<signal name="token_failed">
+			<param index="0" name="error" type="String" />
+			<description>
+				Emitted when registration for remote notifications fails. [param error] contains the localised error description.
+			</description>
+		</signal>
+		<signal name="permission_result">
+			<param index="0" name="granted" type="bool" />
+			<description>
+				Emitted after the user responds to the notification permission prompt. [param granted] is [code]true[/code] if they allowed notifications.
+			</description>
+		</signal>
+	</signals>
+</class>

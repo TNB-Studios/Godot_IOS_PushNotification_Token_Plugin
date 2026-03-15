@@ -1,0 +1,24 @@
+# Build artifacts
+.build/
+.build-xcfw/
+.swiftpm/
+
+# Xcode
+PushNotificationToken.xcodeproj/
+xcuserdata/
+*.xcworkspace/
+
+# SPM resolved versions (regenerated from Package.swift)
+Package.resolved
+
+# Compiled plugin binary (distributed via GitHub Releases, not the repo)
+addons/PushNotificationToken/bin/
+
+# Local SwiftGodot vendor copy (cloned during build)
+vendor/
+
+# macOS
+.DS_Store
+
+# Claude Code
+.claude/

@@ -1,0 +1,6 @@
+[configuration]
+entry_symbol = "push_notification_token_start"
+compatibility_minimum = 4.4
+
+[libraries]
+ios = "res://addons/PushNotificationToken/bin/PushNotificationToken.xcframework"
