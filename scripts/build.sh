@@ -12,6 +12,12 @@ FRAMEWORK_NAME="PushNotificationToken"
 
 IOS_SDK=$(xcrun --sdk iphoneos --show-sdk-path)
 SIM_SDK=$(xcrun --sdk iphonesimulator --show-sdk-path)
+IOS_SDK_VERSION=$(xcrun --sdk iphoneos --show-sdk-version)
+IOS_SDK_BUILD=$(xcrun --sdk iphoneos --show-sdk-build-version)
+SIM_SDK_VERSION=$(xcrun --sdk iphonesimulator --show-sdk-version)
+SIM_SDK_BUILD=$(xcrun --sdk iphonesimulator --show-sdk-build-version)
+XCODE_VERSION=$(/usr/bin/xcodebuild -version | head -1 | awk '{print $2}')
+XCODE_BUILD=$(/usr/bin/xcodebuild -version | tail -1 | awk '{print $3}')
 
 cd "$PROJECT_ROOT"
 
@@ -58,6 +64,10 @@ fi
 create_framework() {
     local LIB_PATH=$1
     local DEST_DIR=$2
+    local PLATFORM_NAME=$3       # iphoneos or iphonesimulator
+    local SUPPORTED_PLATFORM=$4  # iPhoneOS or iPhoneSimulator
+    local PLAT_SDK_VERSION=$5
+    local PLAT_SDK_BUILD=$6
     local FW_DIR="$DEST_DIR/$FRAMEWORK_NAME.framework"
 
     mkdir -p "$FW_DIR/Resources/doc_classes"
@@ -69,20 +79,49 @@ create_framework() {
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
     <key>CFBundleExecutable</key>
     <string>$FRAMEWORK_NAME</string>
     <key>CFBundleIdentifier</key>
     <string>com.pushnotificationtoken.plugin</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
     <key>CFBundleName</key>
     <string>$FRAMEWORK_NAME</string>
-    <key>CFBundleVersion</key>
-    <string>1.0.0</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
     <key>CFBundlePackageType</key>
     <string>FMWK</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleSupportedPlatforms</key>
+    <array>
+        <string>$SUPPORTED_PLATFORM</string>
+    </array>
     <key>MinimumOSVersion</key>
     <string>17.0</string>
+    <key>DTPlatformName</key>
+    <string>$PLATFORM_NAME</string>
+    <key>DTPlatformVersion</key>
+    <string>$PLAT_SDK_VERSION</string>
+    <key>DTSDKName</key>
+    <string>${PLATFORM_NAME}${PLAT_SDK_VERSION}</string>
+    <key>DTSDKBuild</key>
+    <string>$PLAT_SDK_BUILD</string>
+    <key>DTXcode</key>
+    <string>$XCODE_VERSION</string>
+    <key>DTXcodeBuild</key>
+    <string>$XCODE_BUILD</string>
+    <key>UIDeviceFamily</key>
+    <array>
+        <integer>1</integer>
+        <integer>2</integer>
+    </array>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>arm64</string>
+    </array>
 </dict>
 </plist>
 PLIST
@@ -98,8 +137,8 @@ STAGING="$BUILD_DIR/staging"
 rm -rf "$STAGING"
 mkdir -p "$STAGING/device" "$STAGING/simulator"
 
-create_framework "$DEVICE_LIB" "$STAGING/device"
-create_framework "$SIM_LIB" "$STAGING/simulator"
+create_framework "$DEVICE_LIB" "$STAGING/device" "iphoneos" "iPhoneOS" "$IOS_SDK_VERSION" "$IOS_SDK_BUILD"
+create_framework "$SIM_LIB" "$STAGING/simulator" "iphonesimulator" "iPhoneSimulator" "$SIM_SDK_VERSION" "$SIM_SDK_BUILD"
 
 rm -rf "$OUTPUT_DIR/$FRAMEWORK_NAME.xcframework"
 xcodebuild -create-xcframework \
