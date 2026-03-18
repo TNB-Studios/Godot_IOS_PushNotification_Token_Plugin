@@ -3,6 +3,8 @@ import UserNotifications
 import UIKit
 
 /// Singleton that requests iOS push notification permission and exposes the APNs device token.
+/// Add this node to the scene tree — it automatically requests permission and registers for
+/// remote notifications from _ready().
 @Godot
 class PushNotificationToken: Node {
 
@@ -25,6 +27,11 @@ class PushNotificationToken: Node {
     /// Whether we have already swizzled the AppDelegate.
     private static var swizzled = false
 
+    // MARK: - Pending results (set from background threads, emitted in _process)
+    private var pendingPermissionResult: Bool? = nil
+    private var pendingToken: String? = nil
+    private var pendingError: String? = nil
+
     // MARK: - Singleton access
 
     /// Shared reference so the swizzled AppDelegate methods can forward the token back.
@@ -33,22 +40,41 @@ class PushNotificationToken: Node {
     override func _ready() {
         PushNotificationToken.shared = self
         swizzleAppDelegateIfNeeded()
+        requestPermission()
+    }
+
+    override func _process(delta: Double) {
+        // Drain pending results on the Godot main thread
+        if let granted = pendingPermissionResult {
+            pendingPermissionResult = nil
+            emit(signal: PushNotificationToken.permissionResult, granted)
+            if granted {
+                UIApplication.shared.registerForRemoteNotifications()
+            }
+        }
+
+        if let token = pendingToken {
+            pendingToken = nil
+            deviceToken = token
+            emit(signal: PushNotificationToken.tokenReceived, token)
+        }
+
+        if let error = pendingError {
+            pendingError = nil
+            emit(signal: PushNotificationToken.tokenFailed, error)
+        }
     }
 
     // MARK: - Public API
 
     /// Request notification permission and, if granted, register for remote notifications.
-    /// Connect to `permission_result`, `token_received`, and `token_failed` before calling this.
+    /// This is called automatically from _ready(). You only need to call it manually if
+    /// you want to re-trigger the permission flow.
     @Callable
     func requestPermission() {
         let center = UNUserNotificationCenter.current()
-        center.requestAuthorization(options: [.alert, .badge, .sound]) { [weak self] granted, error in
-            DispatchQueue.main.async {
-                self?.emit(signal: PushNotificationToken.permissionResult, granted)
-                if granted {
-                    UIApplication.shared.registerForRemoteNotifications()
-                }
-            }
+        center.requestAuthorization(options: [.alert, .badge, .sound]) { [weak self] granted, _ in
+            self?.pendingPermissionResult = granted
         }
     }
 
@@ -57,8 +83,8 @@ class PushNotificationToken: Node {
     @Callable
     func registerForRemoteNotifications() {
         UNUserNotificationCenter.current().getNotificationSettings { settings in
-            DispatchQueue.main.async {
-                if settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional {
+            if settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional {
+                DispatchQueue.main.async {
                     UIApplication.shared.registerForRemoteNotifications()
                 }
             }
@@ -74,12 +100,11 @@ class PushNotificationToken: Node {
     // MARK: - Token delivery (called from swizzled AppDelegate)
 
     func didReceiveToken(_ token: String) {
-        deviceToken = token
-        emit(signal: PushNotificationToken.tokenReceived, token)
+        pendingToken = token
     }
 
     func didFailToRegister(_ error: String) {
-        emit(signal: PushNotificationToken.tokenFailed, error)
+        pendingError = error
     }
 
     // MARK: - AppDelegate swizzling
@@ -88,7 +113,8 @@ class PushNotificationToken: Node {
         guard !PushNotificationToken.swizzled else { return }
         PushNotificationToken.swizzled = true
 
-        guard let appDelegateClass: AnyClass = object_getClass(UIApplication.shared.delegate) else {
+        guard let delegate = UIApplication.shared.delegate,
+              let appDelegateClass: AnyClass = object_getClass(delegate) else {
             GD.pushWarning("PushNotificationToken: Could not get AppDelegate class for swizzling")
             return
         }
