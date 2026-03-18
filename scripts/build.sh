@@ -70,7 +70,7 @@ create_framework() {
     local PLAT_SDK_BUILD=$6
     local FW_DIR="$DEST_DIR/$FRAMEWORK_NAME.framework"
 
-    mkdir -p "$FW_DIR/Resources/doc_classes"
+    mkdir -p "$FW_DIR"
     cp "$LIB_PATH" "$FW_DIR/$FRAMEWORK_NAME"
     install_name_tool -id "@rpath/$FRAMEWORK_NAME.framework/$FRAMEWORK_NAME" "$FW_DIR/$FRAMEWORK_NAME" 2>/dev/null || true
 
@@ -126,11 +126,8 @@ create_framework() {
 </plist>
 PLIST
 
-    # Embed doc_classes
-    local DOC_SRC="$PROJECT_ROOT/addons/PushNotificationToken/doc_classes"
-    if [ -d "$DOC_SRC" ]; then
-        cp "$DOC_SRC"/*.xml "$FW_DIR/Resources/doc_classes/"
-    fi
+    # Convert plist to binary (required by iOS)
+    plutil -convert binary1 "$FW_DIR/Info.plist"
 }
 
 STAGING="$BUILD_DIR/staging"

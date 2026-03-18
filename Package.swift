@@ -17,7 +17,7 @@ let package = Package(
     targets: [
         .target(
             name: "PushNotificationToken",
-            dependencies: ["SwiftGodot"],
+            dependencies: [.product(name: "SwiftGodotStatic", package: "SwiftGodot")],
             path: "Sources/PushNotificationToken",
             swiftSettings: [.swiftLanguageMode(.v5)]
         )
